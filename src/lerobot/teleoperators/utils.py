@@ -81,6 +81,11 @@ def make_teleoperator_from_config(config: TeleoperatorConfig) -> Teleoperator:
         from .reachy2_teleoperator import Reachy2Teleoperator
 
         return Reachy2Teleoperator(config)
+
+    elif config.type == "bi_openarm_vr_leader":
+        from .bi_openarm_vr_leader import BiOpenarmVRLeader
+
+        return BiOpenarmVRLeader(config)
     else:
         try:
             return cast(Teleoperator, make_device_from_device_class(config))
