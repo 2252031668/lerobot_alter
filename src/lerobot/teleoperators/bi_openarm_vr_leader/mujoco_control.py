@@ -33,7 +33,10 @@ if __name__ == "__main__":
     )
     # 硬编码配置参数
     config = BiOpenarmVRLeaderConfig(
-        # 如果有特定的配置参数，在此处添加
+        ROOT_PATH = "/home/wxx/PycharmProjects/lerobot4_alter/src/lerobot/teleoperators/bi_openarm_vr_leader",# 必须修改绝对路径，指向bi_openarm_vr_leader目录
+        https_port = 8889,#默认为8889
+        websocket_port = 8890,   #默认为8890 如果修改需要同时修改vr_app.js
+        host_ip = "0.0.0.0", #默认为0.0.0.0，会自己获取
     )
     # 创建VR遥操作器实例
     teleop = BiOpenarmVRLeader(config)

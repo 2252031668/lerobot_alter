@@ -1,159 +1,192 @@
-<p align="center">
-  <img alt="LeRobot, Hugging Face Robotics Library" src="./media/readme/lerobot-logo-thumbnail.png" width="100%">
-</p>
+# VR遥操作使用说明
 
-<div align="center">
+在lerobot4.2的基础上 加入自定义的机器人和遥操作设备，符合lerobot 官方接口
 
-[![Tests](https://github.com/huggingface/lerobot/actions/workflows/nightly.yml/badge.svg?branch=main)](https://github.com/huggingface/lerobot/actions/workflows/nightly.yml?query=branch%3Amain)
-[![Python versions](https://img.shields.io/pypi/pyversions/lerobot)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/huggingface/lerobot/blob/main/LICENSE)
-[![Status](https://img.shields.io/pypi/status/lerobot)](https://pypi.org/project/lerobot/)
-[![Version](https://img.shields.io/pypi/v/lerobot)](https://pypi.org/project/lerobot/)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.1-ff69b4.svg)](https://github.com/huggingface/lerobot/blob/main/CODE_OF_CONDUCT.md)
-[![Discord](https://img.shields.io/badge/Discord-Join_Us-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/q8Dzzpym3f)
+## 快速开始
 
-</div>
+创建环境
 
-**LeRobot** aims to provide models, datasets, and tools for real-world robotics in PyTorch. The goal is to lower the barrier to entry so that everyone can contribute to and benefit from shared datasets and pretrained models.
-
-🤗 A hardware-agnostic, Python-native interface that standardizes control across diverse platforms, from low-cost arms (SO-100) to humanoids.
-
-🤗 A standardized, scalable LeRobotDataset format (Parquet + MP4 or images) hosted on the Hugging Face Hub, enabling efficient storage, streaming and visualization of massive robotic datasets.
-
-🤗 State-of-the-art policies that have been shown to transfer to the real-world ready for training and deployment.
-
-🤗 Comprehensive support for the open-source ecosystem to democratize physical AI.
-
-## Quick Start
-
-LeRobot can be installed directly from PyPI.
-
-```bash
-pip install lerobot
-lerobot-info
+```
+conda create -n lerobot python=3.10.18 ffmpeg=7.1.1 -c conda-forge
 ```
 
-> [!IMPORTANT]
-> For detailed installation guide, please see the [Installation Documentation](https://huggingface.co/docs/lerobot/installation).
+将库安装为可编辑模式 
 
-## Robots & Control
+```
+git clone https://github.com/2252031668/lerobot_alter.git
+cd lerobot_alter
+pip install -e .
+```
 
-<div align="center">
-  <img src="./media/readme/robots_control_video.webp" width="640px" alt="Reachy 2 Demo">
-</div>
+```
+pip3 install pin
+pip3 install socket
+pip3 install websockets
+pip3 install mujoco
+pip3 install PyQt5
+```
 
-LeRobot provides a unified `Robot` class interface that decouples control logic from hardware specifics. It supports a wide range of robots and teleoperation devices.
+其中 pin 为动力学库 ，用于 ik 计算  在ubuntu 下安装比较方便，window容易报错
+
+
+
+## 查看硬件端口
+
+运行check_serial_GUI.py，判断左臂还是右臂
+
+```
+conda activate lerobot
+cd lerobot_alter
+python3 check_serial_GUI.py
+```
+
+![image-20260129153943423](assets/image-20260129153943423.png)
+
+注：ubuntu要设置端口权限如下
+
+```
+sudo chmod 666 /dev/ttyACM0
+```
+
+## VR遥操作
+
+已经接入lerobot，满足所有通用操作
+
+### 不带摄像头的遥操作
+
+left_port，right_port，ROOT_PATH需要根据自己的情况来，在conda环境下
+
+```bash
+lerobot-teleoperate \
+  --teleop.type=bi_openarm_vr_leader \
+  --teleop.ROOT_PATH="/home/wxx/PycharmProjects/lerobot4_alter/src/lerobot/teleoperators/bi_openarm_vr_leader" \
+  --robot.type=bi_openarm_follower \
+  --robot.left_port="/dev/ttyACM0" \
+  --robot.right_port="/dev/ttyACM1" \
+  --robot.id=vr_bimanual_robot \
+  --teleop.id=vr_controller \
+  --display_data=true \
+  --fps=30 
+```
+
+-   --display_data= true 会显示关节轨迹数据可视化界面,默认为false
+-   --teleop.https_port =8889  可以设置网页端口，默认8889
+-   --teleop.websocket_port = 8890 监听的地址，默认8890,不要修改，如要改vr_app.js中的内容要手动修改端口
+-   --teleop.https_port = "0.0.0.0 "可以设置ip地址，默认0.0.0.0 会自动获取本机ip
+
+### 带摄像头的遥操作
+
+查找普通相机：
+
+```
+lerobot-find-cameras opencv
+```
+查找inter深度相机
+```
+lerobot-find-cameras realsense
+```
+
+会自动显示相机的id 和并拍摄照片保存在output文件夹
+
+设置相机参数
+
+```bash
+lerobot-teleoperate \
+  --teleop.type=bi_openarm_vr_leader \
+  --teleop.ROOT_PATH="/home/wxx/PycharmProjects/lerobot4_alter/src/lerobot/teleoperators/bi_openarm_vr_leader" \
+  --robot.cameras="{ center: {type: intelrealsense, serial_number_or_name: 944622075590, width: 1280, height: 720, fps: 30}}" \
+  --robot.type=bi_openarm_follower \
+  --robot.left_port="/dev/ttyACM0" \
+  --robot.right_port="/dev/ttyACM1" \
+  --robot.id=vr_bimanual_robot \
+  --teleop.id=vr_controller \
+  --display_data=true \
+  --fps=30  
+```
+![image-20260129161508243](assets/image-20260129161508243.png)
+
+可以添加多个相机，不同的分辨率，具体可调节参数查看lerobot 官方https://huggingface.co/docs/lerobot/en/il_robots
+
+```bash
+--robot.left_arm_config.cameras='{
+wrist: {"type": "opencv", "index_or_path": 1, "width": 640, "height": 480, "fps": 30},
+}' --robot.right_arm_config.cameras='{
+wrist: {"type": "opencv", "index_or_path": 2, "width": 640, "height": 480, "fps": 30},
+}' \
+```
+
+### VR 头戴显示 注意事项
+
+在主界面的时候，可以移动手柄控制 射线指针，按住**LT** 或者 **RT** 就是对指针的确认键
+
+![img](assets/b21bb051f819861811cd948a7efb4d638ad4e6d8.jpeg)
+
+通过 点按右边遥柄的**home** 按键，可以开机/关闭任务栏，从而做到根据你的站立的的位置，重置方向。
+
+![image-20260129164241442](assets/image-20260129164241442.png)
+
+打开VR浏览器访问ip网页或者预设好的快捷网页访问，每次重新启用遥操作，都要刷新或者关闭重新打开网页，然后**正对你之前正方向进行操作。**
+
+
+
+<img src="assets/image-20260129162122053.png" alt="image-20260129162122053" style="zoom:33%;" />
+
+按键事件无需操控激活，x，y按键也可以添加预设动作或位置
+
+- B：移动到预设位置
+- A：电机失能，用于紧急停止和退出控制
+
+
+
+![image-20260129164729681](assets/image-20260129164729681.png)
+
+#### 控制逻辑相对运动
+
+建议按B：移动到预设位置 之后在进行激活操控
+
+按住侧边按键进行操控激活，激活状态下可以使用夹爪和移动控制，即每次按住侧边按键进行操控激活，都是**相对运动**记录的开始
+
+![VR Controller Instructions](assets/telegrip_instructions.jpg)
+
+结束后按a 结束控制
+
+如果异常退出导致端口占用，手动查询清除
+
+```
+lsof -i :8889  
+sudo kill -9 #清除对应进程
+```
+
+## mujoco仿真
+
+编辑位于src/lerobot/teleoperators/bi_openarm_vr_leader 文件下的mujoco_control.py，
 
 ```python
-from lerobot.robots.myrobot import MyRobot
-
-# Connect to a robot
-robot = MyRobot(config=...)
-robot.connect()
-
-# Read observation and send action
-obs = robot.get_observation()
-action = model.select_action(obs)
-robot.send_action(action)
+    config = BiOpenarmVRLeaderConfig(
+        ROOT_PATH = "/home/wxx/PycharmProjects/lerobot4_alter/src/lerobot/teleoperators/bi_openarm_vr_leader",# 必须修改绝对路径，指向bi_openarm_vr_leader目录
+        https_port = 8889, #默认为8889，可以不填
+        websocket_port = 8890,   #默认为8890 可以不填 如果修改需要手动修改vr_app.js中的websocket_port
+        host_ip = "0.0.0.0", #默认为0.0.0.0，会自己获取，可以不填
+    )
 ```
 
-**Supported Hardware:** SO100, LeKiwi, Koch, HopeJR, OMX, EarthRover, Reachy2, Gamepads, Keyboards, Phones, OpenARM, Unitree G1.
+必须在bi_openarm_vr_leader目录下运行
 
-While these devices are natively integrated into the LeRobot codebase, the library is designed to be extensible. You can easily implement the Robot interface to utilize LeRobot's data collection, training, and visualization tools for your own custom robot.
-
-For detailed hardware setup guides, see the [Hardware Documentation](https://huggingface.co/docs/lerobot/integrate_hardware).
-
-## LeRobot Dataset
-
-To solve the data fragmentation problem in robotics, we utilize the **LeRobotDataset** format.
-
-- **Structure:** Synchronized MP4 videos (or images) for vision and Parquet files for state/action data.
-- **HF Hub Integration:** Explore thousands of robotics datasets on the [Hugging Face Hub](https://huggingface.co/lerobot).
-- **Tools:** Seamlessly delete episodes, split by indices/fractions, add/remove features, and merge multiple datasets.
-
-```python
-from lerobot.datasets.lerobot_dataset import LeRobotDataset
-
-# Load a dataset from the Hub
-dataset = LeRobotDataset("lerobot/aloha_mobile_cabinet")
-
-# Access data (automatically handles video decoding)
-episode_index=0
-print(f"{dataset[episode_index]['action'].shape=}\n")
+```
+conda activate lerobot
+cd src/lerobot/teleoperators/bi_openarm_vr_leader
+python3 mujoco_control.py
 ```
 
-Learn more about it in the [LeRobotDataset Documentation](https://huggingface.co/docs/lerobot/lerobot-dataset-v3)
+![image-20260129154555702](assets/image-20260129154555702.png)
 
-## SoTA Models
+## VR遥操作+数据记录
 
-LeRobot implements state-of-the-art policies in pure PyTorch, covering Imitation Learning, Reinforcement Learning, and Vision-Language-Action (VLA) models, with more coming soon. It also provides you with the tools to instrument and inspect your training process.
+指令参考https://huggingface.co/docs/lerobot/en/il_robots
 
-<p align="center">
-  <img alt="Gr00t Architecture" src="./media/readme/VLA_architecture.jpg" width="640px">
-</p>
-
-Training a policy is as simple as running a script configuration:
-
-```bash
-lerobot-train \
-  --policy=act \
-  --dataset.repo_id=lerobot/aloha_mobile_cabinet
+```
+lerobot-record \
 ```
 
-| Category                   | Models                                                                                                                                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Imitation Learning**     | [ACT](./docs/source/policy_act_README.md), [Diffusion](./docs/source/policy_diffusion_README.md), [VQ-BeT](./docs/source/policy_vqbet_README.md)                                                             |
-| **Reinforcement Learning** | [HIL-SERL](./docs/source/hilserl.mdx), [TDMPC](./docs/source/policy_tdmpc_README.md) & QC-FQL (coming soon)                                                                                                  |
-| **VLAs Models**            | [Pi0Fast](./docs/source/pi0fast.mdx), [Pi0.5](./docs/source/pi05.mdx), [GR00T N1.5](./docs/source/policy_groot_README.md), [SmolVLA](./docs/source/policy_smolvla_README.md), [XVLA](./docs/source/xvla.mdx) |
 
-Similarly to the hardware, you can easily implement your own policy & leverage LeRobot's data collection, training, and visualization tools, and share your model to the HF Hub
 
-For detailed policy setup guides, see the [Policy Documentation](https://huggingface.co/docs/lerobot/bring_your_own_policies).
-
-## Inference & Evaluation
-
-Evaluate your policies in simulation or on real hardware using the unified evaluation script. LeRobot supports standard benchmarks like **LIBERO**, **MetaWorld** and more to come.
-
-```bash
-# Evaluate a policy on the LIBERO benchmark
-lerobot-eval \
-  --policy.path=lerobot/pi0_libero_finetuned \
-  --env.type=libero \
-  --env.task=libero_object \
-  --eval.n_episodes=10
-```
-
-Learn how to implement your own simulation environment or benchmark and distribute it from the HF Hub by following the [EnvHub Documentation](https://huggingface.co/docs/lerobot/envhub)
-
-## Resources
-
-- **[Documentation](https://huggingface.co/docs/lerobot/index):** The complete guide to tutorials & API.
-- **[Chinese Tutorials: LeRobot+SO-ARM101中文教程-同济子豪兄](https://zihao-ai.feishu.cn/wiki/space/7589642043471924447)** Detailed doc for assembling, teleoperate, dataset, train, deploy. Verified by Seed Studio and 5 global hackathon players.
-- **[Discord](https://discord.gg/q8Dzzpym3f):** Join the `LeRobot` server to discuss with the community.
-- **[X](https://x.com/LeRobotHF):** Follow us on X to stay up-to-date with the latest developments.
-- **[Robot Learning Tutorial](https://huggingface.co/spaces/lerobot/robot-learning-tutorial):** A free, hands-on course to learn robot learning using LeRobot.
-
-## Citation
-
-If you use LeRobot in your research, please cite:
-
-```bibtex
-@misc{cadene2024lerobot,
-    author = {Cadene, Remi and Alibert, Simon and Soare, Alexander and Gallouedec, Quentin and Zouitine, Adil and Palma, Steven and Kooijmans, Pepijn and Aractingi, Michel and Shukor, Mustafa and Aubakirova, Dana and Russi, Martino and Capuano, Francesco and Pascal, Caroline and Choghari, Jade and Moss, Jess and Wolf, Thomas},
-    title = {LeRobot: State-of-the-art Machine Learning for Real-World Robotics in Pytorch},
-    howpublished = "\url{https://github.com/huggingface/lerobot}",
-    year = {2024}
-}
-```
-
-## Contribute
-
-We welcome contributions from everyone in the community! To get started, please read our [CONTRIBUTING.md](./CONTRIBUTING.md) guide. Whether you're adding a new feature, improving documentation, or fixing a bug, your help and feedback are invaluable. We're incredibly excited about the future of open-source robotics and can't wait to work with you on what's next—thank you for your support!
-
-<p align="center">
-  <img alt="SO101 Video" src="./media/readme/so100_video.webp" width="640px">
-</p>
-
-<div align="center">
-<sub>Built by the <a href="https://huggingface.co/lerobot">LeRobot</a> team at <a href="https://huggingface.co">Hugging Face</a> with ❤️</sub>
-</div>
